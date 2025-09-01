@@ -1,9 +1,11 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import Category
+from .category_forms import CategoryForm
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    form = CategoryForm
     list_display = ('category_name', 'image_preview')
     search_fields = ('category_name',)
     list_filter = ('category_name',)
@@ -16,7 +18,6 @@ class CategoryAdmin(admin.ModelAdmin):
             )
         return "No image"
     
-    image_preview.short_description = 'Image Preview'
     
     readonly_fields = ('image_preview',)
     fields = ('category_name', 'image', 'image_preview')

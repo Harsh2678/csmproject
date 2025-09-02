@@ -44,9 +44,15 @@ class SubCategory(models.Model):
         ]
 
     def clean(self):
+        if not self.category_id:
+            raise ValidationError({"category": "Category is required."})
+
         if SubCategory.objects.exclude(pk=self.pk).filter(sub_category_name__iexact=self.sub_category_name, category=self.category).exists():
             raise ValidationError({"sub_category_name": "Sub Category already exists."})
         
+        if self.sub_category_name and len(self.sub_category_name) < 3:
+            raise ValidationError({"sub_category_name": "Sub Category name must be at least 3 characters long."})
+
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)

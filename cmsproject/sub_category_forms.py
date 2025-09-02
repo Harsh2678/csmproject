@@ -6,6 +6,12 @@ class SubCategoryForm(forms.ModelForm):
     class Meta:
         model = SubCategory
         fields = "__all__"
+    
+    def clean_category(self):
+        category = self.cleaned_data.get("category")
+        if not category:
+            raise forms.ValidationError("Category is required.")  # ✅ Only this will show
+        return category
 
     def clean_image(self):
         image = self.cleaned_data.get("sub_category_image")

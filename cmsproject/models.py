@@ -59,3 +59,38 @@ class SubCategory(models.Model):
 
     def __str__(self):
         return self.sub_category_name
+
+class Product(models.Model):
+    sub_category = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
+    product_name = models.CharField(max_length=255)
+    product_image = models.ImageField(upload_to="products/", null=True, blank=True)
+    product_price = models.DecimalField(max_digits=10, decimal_places=2)
+    product_description = models.TextField(null=True, blank=True)
+    product_quantity = models.IntegerField()
+    product_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                Lower("product_name"),
+                "sub_category",
+                name="unique_product_per_sub_category_ci"
+            )
+        ]
+    
+    def clean(self):
+        if not self.sub_category_id:
+            raise ValidationError({"sub_category": "Sub Category is required."})
+        
+        if Product.objects.exclude(pk=self.pk).filter(product_name__iexact=self.product_name, sub_category=self.sub_category).exists():
+            raise ValidationError({"product_name": "Product already exists."})
+        
+        if self.product_name and len(self.product_name) < 3:
+            raise ValidationError({"product_name": "Product name must be at least 3 characters long."})
+        
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.product_name

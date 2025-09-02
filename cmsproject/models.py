@@ -28,3 +28,28 @@ class Category(models.Model):
 
     def __str__(self):
         return self.category_name
+
+class SubCategory(models.Model):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    sub_category_name = models.CharField(max_length=255)
+    sub_category_image = models.ImageField(upload_to="sub_categories/", null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                Lower("sub_category_name"),
+                "category",
+                name="unique_sub_category_per_category_ci"
+            )
+        ]
+
+    def clean(self):
+        if SubCategory.objects.exclude(pk=self.pk).filter(sub_category_name__iexact=self.sub_category_name, category=self.category).exists():
+            raise ValidationError({"sub_category_name": "Sub Category already exists."})
+        
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.sub_category_name

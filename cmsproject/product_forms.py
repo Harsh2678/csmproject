@@ -19,16 +19,20 @@ class ProductForm(forms.ModelForm):
             raise forms.ValidationError("Category is required.")
         return category
 
-    def clean_price(self):
+    def clean_product_price(self):
         price = self.cleaned_data.get("product_price")
         if not price:
             raise forms.ValidationError("Price is required.")
+        if price < 0:
+            raise forms.ValidationError("Price must be grater than zero")
         return price
 
-    def clean_quantity(self):
+    def clean_product_quantity(self):
         quantity = self.cleaned_data.get("product_quantity")
         if not quantity:
             raise forms.ValidationError("Quantity is required.")
+        if quantity < 0:
+            raise forms.ValidationError("Quantity must be grater than zero")
         return quantity
 
     def clean_image(self):

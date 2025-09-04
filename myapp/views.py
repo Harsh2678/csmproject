@@ -1,10 +1,12 @@
 from django.shortcuts import render, get_object_or_404
-from cmsproject.models import Category, SubCategory
+from cmsproject.models import Category, SubCategory, Product
 
 def home(request):
     categories = Category.objects.all()
+    products = Product.objects.order_by('-id')[:4]
     context = {
-        'categories': categories
+        'categories': categories,
+        'products': products,
     }
     return render(request, "home.html", context)
 
@@ -20,3 +22,10 @@ def subcategories(request, category_id):
         'sub_categories': sub_categories,
     }
     return render(request, "subcategories.html", context)
+
+def products(request):
+    products = Product.objects.order_by('-id')
+    context = {
+        'products': products
+    }
+    return render(request, "products.html", context)

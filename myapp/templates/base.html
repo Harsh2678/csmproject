@@ -36,54 +36,8 @@
     </section>
 
     <!-- Categories Section -->
-    <section class="py-5">
-        <div class="container">
-            <div class="row mb-5">
-                <div class="col-12 text-center">
-                    <h2 class="display-5 fw-bold mb-3">Shop by Category</h2>
-                    <p class="lead text-muted">Explore our wide range of product categories</p>
-                </div>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-3">
-                    <a href="electronics.html" class="text-decoration-none">
-                        <div class="category-card rounded" style="background-image: url('https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop')">
-                            <div class="category-overlay rounded">
-                                <span>Electronics</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <a href="fashion.html" class="text-decoration-none">
-                        <div class="category-card rounded" style="background-image: url('https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop')">
-                            <div class="category-overlay rounded">
-                                <span>Fashion</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <a href="home-living.html" class="text-decoration-none">
-                        <div class="category-card rounded" style="background-image: url('https://images.pexels.com/photos/1080721/pexels-photo-1080721.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop')">
-                            <div class="category-overlay rounded">
-                                <span>Home & Living</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <a href="sports.html" class="text-decoration-none">
-                        <div class="category-card rounded" style="background-image: url('https://images.pexels.com/photos/863988/pexels-photo-863988.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop')">
-                            <div class="category-overlay rounded">
-                                <span>Sports</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
+    {% block category %}
+    {% endblock %}
 
     <!-- Featured Products -->
     <section class="py-5 bg-white">

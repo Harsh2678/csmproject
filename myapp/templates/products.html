@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - ShopEase</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">
+                <i class="bi bi-shop me-2"></i>ShopEase
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="categories.html">Categories</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="products.html">Products</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="cart.html">
+                            <i class="bi bi-cart3 me-1"></i>Cart
+                            <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle">3</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">
+                            <i class="bi bi-bag-check me-1"></i>Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile.html">
+                            <i class="bi bi-person me-1"></i>Profile
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item active">Products</li>
+                    </ol>
+                </nav>
+                <h1 class="display-4 fw-bold">All Products</h1>
+                <p class="lead text-muted">12 products found</p>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search products...">
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select">
+                    <option value="name">Sort by Name</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Rating</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <div class="position-relative">
+                        <img src="https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="iPhone 15 Pro">
+                        <span class="badge bg-warning position-absolute top-0 start-0 m-2">Sale</span>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">iPhone 15 Pro</h5>
+                        <p class="card-text text-muted small">Latest iPhone with advanced camera system and A17 Pro chip.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$999</span>
+                                <span class="product-original-price">$1099</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★★</div>
+                                <small class="text-muted">(324)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <img src="https://images.pexels.com/photos/1092644/pexels-photo-1092644.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Samsung Galaxy S24">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Samsung Galaxy S24</h5>
+                        <p class="card-text text-muted small">Flagship Samsung phone with incredible camera and display.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$899</span>
+                                <span class="product-original-price">$999</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(256)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <div class="position-relative">
+                        <img src="https://images.pexels.com/photos/812264/pexels-photo-812264.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="MacBook Pro">
+                        <span class="badge bg-warning position-absolute top-0 start-0 m-2">Sale</span>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">MacBook Pro 14"</h5>
+                        <p class="card-text text-muted small">Professional laptop with M3 chip for ultimate performance.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$1999</span>
+                                <span class="product-original-price">$2199</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★★</div>
+                                <small class="text-muted">(189)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <img src="https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Dell XPS 13">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Dell XPS 13</h5>
+                        <p class="card-text text-muted small">Ultra-thin laptop with stunning InfinityEdge display.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$1299</span>
+                                <span class="product-original-price">$1499</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(142)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <img src="https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Premium Cotton T-Shirt">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Premium Cotton T-Shirt</h5>
+                        <p class="card-text text-muted small">Comfortable and stylish cotton t-shirt for everyday wear.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$29</span>
+                                <span class="product-original-price">$39</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(89)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <div class="position-relative">
+                        <img src="https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Elegant Summer Dress">
+                        <span class="badge bg-warning position-absolute top-0 start-0 m-2">Sale</span>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Elegant Summer Dress</h5>
+                        <p class="card-text text-muted small">Beautiful summer dress perfect for any occasion.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$79</span>
+                                <span class="product-original-price">$99</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(203)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <img src="https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Dining Table Set">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Dining Table Set</h5>
+                        <p class="card-text text-muted small">Elegant dining table set for 6 people.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$599</span>
+                                <span class="product-original-price">$799</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(92)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card product-card h-100">
+                    <div class="position-relative">
+                        <img src="https://images.pexels.com/photos/4327023/pexels-photo-4327023.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="card-img-top product-image" alt="Yoga Mat Premium">
+                        <span class="badge bg-warning position-absolute top-0 start-0 m-2">Sale</span>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Yoga Mat Premium</h5>
+                        <p class="card-text text-muted small">High-quality yoga mat with excellent grip and cushioning.</p>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="product-price me-2">$49</span>
+                                <span class="product-original-price">$69</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">★★★★☆</div>
+                                <small class="text-muted">(234)</small>
+                            </div>
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Product pagination">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <a class="page-link" href="#">1</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-5 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-3 mb-4">
+                    <h5 class="fw-bold">
+                        <i class="bi bi-shop me-2"></i>ShopEase
+                    </h5>
+                    <p class="text-muted">Your trusted online shopping destination with quality products and excellent service.</p>
+                </div>
+                <div class="col-lg-3 mb-4">
+                    <h6 class="fw-bold">Quick Links</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="index.html" class="text-muted text-decoration-none">Home</a></li>
+                        <li><a href="categories.html" class="text-muted text-decoration-none">Categories</a></li>
+                        <li><a href="products.html" class="text-muted text-decoration-none">Products</a></li>
+                        <li><a href="orders.html" class="text-muted text-decoration-none">Orders</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 mb-4">
+                    <h6 class="fw-bold">Customer Service</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-muted text-decoration-none">Contact Us</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Shipping Info</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Returns</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 mb-4">
+                    <h6 class="fw-bold">Connect With Us</h6>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-muted"><i class="bi bi-facebook fs-4"></i></a>
+                        <a href="#" class="text-muted"><i class="bi bi-twitter fs-4"></i></a>
+                        <a href="#" class="text-muted"><i class="bi bi-instagram fs-4"></i></a>
+                        <a href="#" class="text-muted"><i class="bi bi-linkedin fs-4"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center text-muted">
+                <p class="mb-0">&copy; 2024 ShopEase. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

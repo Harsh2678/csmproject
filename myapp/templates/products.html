@@ -65,9 +65,11 @@
                             <div class="d-flex align-items-center mb-2">
                                 <span class="product-price me-2">${{ product.product_price }}</span>
                             </div>
+                            {% if user.is_authenticated %}
                             <button class="btn btn-primary w-100">
                                 <i class="bi bi-cart-plus me-2"></i>Add to Cart
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

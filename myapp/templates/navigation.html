@@ -19,22 +19,42 @@
                 </li>
             </ul>
             <ul class="navbar-nav">
+                {% if user.is_authenticated %}
                 <li class="nav-item">
                     <a class="nav-link position-relative" href="cart.html">
                         <i class="bi bi-cart3 me-1"></i>Cart
                         <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle">3</span>
                     </a>
                 </li>
+                
                 <li class="nav-item">
                     <a class="nav-link" href="orders.html">
                         <i class="bi bi-bag-check me-1"></i>Orders
                     </a>
                 </li>
+                
                 <li class="nav-item">
-                    <a class="nav-link" href="profile.html">
-                        <i class="bi bi-person me-1"></i>Profile
+                    <a class="nav-link" href="{% url 'account_logout' %}">
+                        <i class="bi bi-box-arrow-right me-1"></i>Logout
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="profile.html">
+                        <i class="bi bi-person me-1"></i>{{ user.username }}
+                    </a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'account_login' %}">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'account_signup' %}">
+                        <i class="bi bi-person-plus me-1"></i>Sign Up
+                    </a>
+                </li>
+                {% endif %}
             </ul>
         </div>
     </div>

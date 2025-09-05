@@ -28,9 +28,11 @@
                                 <div class="text-warning me-2">★★★★★</div>
                                 <small class="text-muted">(324)</small>
                             </div>
+                            {% if user.is_authenticated %}
                             <button class="btn btn-primary w-100">
                                 <i class="bi bi-cart-plus me-2"></i>Add to Cart
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

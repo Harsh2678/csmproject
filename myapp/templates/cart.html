@@ -56,18 +56,36 @@
                                     </div>
                                     <div class="col-md-2">
                                         <div class="quantity-controls d-flex align-items-center">
+                                            {% if item.quantity == 1 %}
+                                                <!-- If only 1, decrease = remove -->
+                                                <form method="post" action="{% url 'remove_from_cart' item.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-dash"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <!-- If more than 1, decrease = update -->
+                                                <form method="post" action="{% url 'update_cart' item.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button class="btn btn-sm btn-outline-secondary" name="action" value="decrease">
+                                                        <i class="bi bi-dash"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                    
+                                            <span class="fw-bold px-2">{{ item.quantity }}</span>
+                                    
+                                            <!-- Always allow increase via update_cart -->
                                             <form method="post" action="{% url 'update_cart' item.id %}" class="d-inline">
                                                 {% csrf_token %}
-                                                <button class="btn btn-sm btn-outline-secondary" name="action" value="decrease">
-                                                    <i class="bi bi-dash"></i>
-                                                </button>
-                                                <span class="fw-bold px-2">{{ item.quantity }}</span>
                                                 <button class="btn btn-sm btn-outline-secondary" name="action" value="increase">
                                                     <i class="bi bi-plus"></i>
                                                 </button>
                                             </form>
                                         </div>
                                     </div>
+                                    
                                     <div class="col-md-2 text-end">
                                         <div class="fw-bold mb-2">
                                             $ {% widthratio item.product.product_price 1 item.quantity as total %}

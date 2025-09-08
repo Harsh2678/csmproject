@@ -154,9 +154,12 @@
                             <span>${{total}}</span>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100 mt-4 btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>Place Order
-                        </button>
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100 mt-4 btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>Place Order
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

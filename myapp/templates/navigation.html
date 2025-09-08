@@ -21,9 +21,11 @@
             <ul class="navbar-nav">
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link position-relative" href="cart.html">
+                    <a class="nav-link position-relative" href="{% url 'cart' %}">
                         <i class="bi bi-cart3 me-1"></i>Cart
-                        <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle">3</span>
+                        {% if cart_count > 0 %}
+                        <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle">{{ cart_count }}</span>
+                        {% endif %}
                     </a>
                 </li>
                 

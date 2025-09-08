@@ -78,3 +78,17 @@ def remove_from_cart(request, item_id):
     item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
     item.delete()
     return redirect("cart")
+
+@login_required
+def checkout(request):
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    items = cart.items.all()
+    subtotal = sum(item.product.product_price * item.quantity for item in items)
+    tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
+    total = (subtotal + tax).quantize(Decimal('0.01'))
+    return render(request, "checkout.html", {
+        "cart": cart,
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": total,
+    })

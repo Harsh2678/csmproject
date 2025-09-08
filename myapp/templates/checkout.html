@@ -124,7 +124,7 @@
                                 {% if item.product.product_image %}
                                 <img src="{{ item.product.product_image.url }}" class="me-3 rounded" width="50" height="50" alt="{{ item.product.product_name }}">
                                 {% else %}
-                                <img src="https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop" class="me-3 rounded" alt="{{ item.product.product_name }}">
+                                <img src="https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop" class="me-3 rounded" alt="{{ item.product.product_name }}" width="50" height="50">
                                 {% endif %}
                                 <div class="flex-grow-1">
                                     <h6 class="mb-0">{{ item.product.product_name }}</h6>

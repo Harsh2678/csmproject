@@ -76,8 +76,5 @@ def update_cart(request, item_id):
 @login_required
 def remove_from_cart(request, item_id):
     item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-    print("===========")
-    print(item)
-    print("===========")
     item.delete()
     return redirect("cart")

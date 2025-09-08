@@ -65,6 +65,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'cmsproject.urls'
 STATIC_URL = '/static/'
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"   # Redirect after logout
+ACCOUNT_LOGOUT_ON_GET = True        # Logout immediately without confirmation
+
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
@@ -81,6 +84,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'myapp.context_processors.cart_context',
             ],
         },
     },

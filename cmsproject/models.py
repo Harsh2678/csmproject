@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User  # or your custom user
 
 class Category(models.Model):
     category_name = models.CharField(max_length=255)
@@ -94,3 +95,22 @@ class Product(models.Model):
 
     def __str__(self):
         return self.product_name
+
+class Cart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="carts")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cart {self.id} for {self.user.username}"
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey("Product", on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.quantity} × {self.product.product_name}"
+
+    @property
+    def total_price(self):
+        return self.product.product_price * self.quantity

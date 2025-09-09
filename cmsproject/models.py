@@ -139,3 +139,41 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} × {self.product.product_name}"
+
+class ShippingInfo(models.Model):
+    from django.core.validators import RegexValidator
+
+    STATE_CHOICES = [
+        ("CA", "California"),
+        ("NY", "New York"),
+        ("TX", "Texas"),
+        ("FL", "Florida"),
+        ("IL", "Illinois"),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="shipping_info")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="shipping_infos")
+    shipping_first_name = models.CharField(
+        max_length=255,
+        validators=[RegexValidator(r'^[A-Za-z\s-]+$', "This field may only contain letters, spaces, and hyphens.")]
+    )
+    shipping_last_name = models.CharField(
+        max_length=255,
+        validators=[RegexValidator(r'^[A-Za-z\s-]+$', "This field may only contain letters, spaces, and hyphens.")]
+    )
+    shipping_email = models.EmailField(max_length=255)
+    shipping_phone_number = models.CharField(
+        max_length=10,
+        validators=[RegexValidator(r"^\+?\d{10}$", "Enter a valid phone number.")]
+    )
+    shipping_address = models.CharField(max_length=255)
+    shipping_city = models.CharField(max_length=255)
+    shipping_zipcode = models.CharField(
+        max_length=7,
+        validators=[RegexValidator(r"^\+?\d{6}$", "Enter a valid ZIP/Postal code.")]
+    )
+    shipping_state = models.CharField(max_length=2, choices=STATE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Rely on ModelForm field validators/messages for per-field errors

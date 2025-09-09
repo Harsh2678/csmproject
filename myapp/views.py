@@ -1,7 +1,8 @@
 from django.shortcuts import redirect, render, get_object_or_404
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-from cmsproject.models import Category, SubCategory, Product, Cart, CartItem, Order, OrderItem
+from cmsproject.models import Category, SubCategory, Product, Cart, CartItem, Order, OrderItem, ShippingInfo
+from .forms import ShippingInfoForm
 
 def home(request):
     categories = Category.objects.all()
@@ -70,6 +71,8 @@ def cart_view(request):
 def checkout(request):
     cart = get_object_or_404(Cart, user=request.user)
     items = cart.items.select_related("product")
+    if not items.exists():
+        return redirect("products")
     # compute current totals for display
     subtotal = sum(item.product.product_price * item.quantity for item in items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
@@ -77,12 +80,19 @@ def checkout(request):
     if request.method == "POST":
         if not items.exists():
             return redirect("cart")
+        form = ShippingInfoForm(request.POST)
+        if not form.is_valid():
+            return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total, "form": form})
         order = Order.objects.create(
             user=request.user,
             subtotal=subtotal,
             tax_amount=tax,
             total_price=total,
         )
+        shipping = form.save(commit=False)
+        shipping.user = request.user
+        shipping.order = order
+        shipping.save()
         for item in items:
             OrderItem.objects.create(
                 order=order,
@@ -98,7 +108,7 @@ def checkout(request):
         cart.cart_total = Decimal('0.00')
         cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
         return redirect("order_success")
-    return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total})
+    return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total, "form": ShippingInfoForm()})
 
 
 @login_required
@@ -125,3 +135,9 @@ def remove_from_cart(request, item_id):
     return redirect("cart")
 
 # duplicate checkout removed
+@login_required
+def order(request):
+    orders = Order.objects.filter(user=request.user).order_by("-created_at")
+    return render(request, "order.html", {
+        'orders': orders,
+    })

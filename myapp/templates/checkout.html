@@ -20,8 +20,8 @@
             <div class="col-12">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none">Home</a></li>
-                        <li class="breadcrumb-item"><a href="cart.html" class="text-decoration-none">Cart</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'cart' %}" class="text-decoration-none">Cart</a></li>
                         <li class="breadcrumb-item active">Checkout</li>
                     </ol>
                 </nav>
@@ -32,7 +32,15 @@
 
         <div class="row">
             <div class="col-lg-8">
-                <form>
+                {% if form and form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for err in form.non_field_errors %}
+                        <div>{{ err }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <form id="checkout-form" method="post" novalidate>
+                    {% csrf_token %}
                     <!-- Shipping Information -->
                     <div class="card mb-4">
                         <div class="card-header">
@@ -42,41 +50,66 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">First Name *</label>
-                                    <input type="text" class="form-control" required>
+                                    <input type="text" name="shipping_first_name" class="form-control" value="{{ form.shipping_first_name.value|default:'' }}" required>
+                                    {% if form.shipping_first_name.errors %}
+                                        <div class="text-danger small">{{ form.shipping_first_name.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Last Name *</label>
-                                    <input type="text" class="form-control" required>
+                                    <input type="text" name="shipping_last_name" class="form-control" value="{{ form.shipping_last_name.value|default:'' }}" required>
+                                    {% if form.shipping_last_name.errors %}
+                                        <div class="text-danger small">{{ form.shipping_last_name.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Email *</label>
-                                    <input type="email" class="form-control" required>
+                                    <input type="email" name="shipping_email" class="form-control" value="{{ form.shipping_email.value|default:'' }}" required>
+                                    {% if form.shipping_email.errors %}
+                                        <div class="text-danger small">{{ form.shipping_email.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Phone *</label>
-                                    <input type="tel" class="form-control" required>
+                                    <input type="tel" name="shipping_phone_number" class="form-control" value="{{ form.shipping_phone_number.value|default:'' }}" required>
+                                    {% if form.shipping_phone_number.errors %}
+                                        <div class="text-danger small">{{ form.shipping_phone_number.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Address *</label>
-                                    <input type="text" class="form-control" required>
+                                    <input type="text" name="shipping_address" class="form-control" value="{{ form.shipping_address.value|default:'' }}" required>
+                                    {% if form.shipping_address.errors %}
+                                        <div class="text-danger small">{{ form.shipping_address.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">City *</label>
-                                    <input type="text" class="form-control" required>
+                                    <input type="text" name="shipping_city" class="form-control" value="{{ form.shipping_city.value|default:'' }}" required>
+                                    {% if form.shipping_city.errors %}
+                                        <div class="text-danger small">{{ form.shipping_city.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">State *</label>
-                                    <select class="form-select" required>
+                                    <select class="form-select" name="shipping_state" required>
                                         <option value="">Choose...</option>
-                                        <option value="CA">California</option>
-                                        <option value="NY">New York</option>
-                                        <option value="TX">Texas</option>
-                                        <option value="FL">Florida</option>
+                                        <option value="CA" {% if form.shipping_state.value == 'CA' %}selected{% endif %}>California</option>
+                                        <option value="NY" {% if form.shipping_state.value == 'NY' %}selected{% endif %}>New York</option>
+                                        <option value="TX" {% if form.shipping_state.value == 'TX' %}selected{% endif %}>Texas</option>
+                                        <option value="FL" {% if form.shipping_state.value == 'FL' %}selected{% endif %}>Florida</option>
+                                        <option value="IL" {% if form.shipping_state.value == 'IL' %}selected{% endif %}>Illinois</option>
                                     </select>
+                                    {% if form.shipping_state.errors %}
+                                        <div class="text-danger small">{{ form.shipping_state.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">ZIP Code *</label>
-                                    <input type="text" class="form-control" required>
+                                    <input type="text" name="shipping_zipcode" class="form-control" value="{{ form.shipping_zipcode.value|default:'' }}" required>
+                                    {% if form.shipping_zipcode.errors %}
+                                        <div class="text-danger small">{{ form.shipping_zipcode.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -89,21 +122,21 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label">Card Number *</label>
-                                <input type="text" class="form-control" placeholder="1234 5678 9012 3456" required>
+                                <label class="form-label">Card Number</label>
+                                <input type="text" class="form-control" placeholder="1234 5678 9012 3456">
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Expiry Date *</label>
-                                    <input type="text" class="form-control" placeholder="MM/YY" required>
+                                    <label class="form-label">Expiry Date</label>
+                                    <input type="text" class="form-control" placeholder="MM/YY">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">CVV *</label>
-                                    <input type="text" class="form-control" placeholder="123" required>
+                                    <label class="form-label">CVV</label>
+                                    <input type="text" class="form-control" placeholder="123">
                                 </div>
                                 <div class="col-12 mb-3">
-                                    <label class="form-label">Name on Card *</label>
-                                    <input type="text" class="form-control" required>
+                                    <label class="form-label">Name on Card</label>
+                                    <input type="text" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -154,12 +187,9 @@
                             <span>${{total}}</span>
                         </div>
 
-                        <form method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success w-100 mt-4 btn-lg">
-                                <i class="bi bi-check-circle me-2"></i>Place Order
-                            </button>
-                        </form>
+                        <button type="submit" form="checkout-form" class="btn btn-success w-100 mt-4 btn-lg">
+                            <i class="bi bi-check-circle me-2"></i>Place Order
+                        </button>
                     </div>
                 </div>
             </div>

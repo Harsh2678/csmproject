@@ -135,3 +135,9 @@ def remove_from_cart(request, item_id):
     return redirect("cart")
 
 # duplicate checkout removed
+@login_required
+def order(request):
+    orders = Order.objects.filter(user=request.user).order_by("-created_at")
+    return render(request, "order.html", {
+        'orders': orders,
+    })

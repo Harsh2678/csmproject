@@ -114,33 +114,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Payment Information -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Card Number</label>
-                                <input type="text" class="form-control" placeholder="1234 5678 9012 3456">
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Expiry Date</label>
-                                    <input type="text" class="form-control" placeholder="MM/YY">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">CVV</label>
-                                    <input type="text" class="form-control" placeholder="123">
-                                </div>
-                                <div class="col-12 mb-3">
-                                    <label class="form-label">Name on Card</label>
-                                    <input type="text" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </form>
             </div>
 
@@ -282,7 +255,10 @@
                         redirect: true,
                         prefill: data.prefill,
                         config: {
-                            preferences: { show_default_blocks: true }
+                            preferences: { show_default_blocks: true },
+                            display: {
+                                hide: [ { method: 'paylater' } ]
+                            }
                         },
                         handler: async function (response){
                             const verifyRes = await fetch('{% url "verify_payment" %}', {
@@ -316,7 +292,7 @@
                     const rzp = new Razorpay(options);
                     rzp.on('payment.failed', function (resp) {
                         const detail = resp && resp.error ? (resp.error.description || resp.error.reason || resp.error.code) : '';
-                        alert('Payment failed. ' + (detail || ''));
+                        window.location.href = '{% url "order_error" %}' + '?message=' + encodeURIComponent(detail || 'Payment failed');
                     });
                     rzp.open();
                 } catch (e) {

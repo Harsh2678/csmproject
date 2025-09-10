@@ -96,6 +96,11 @@ def order_success(request):
     return render(request, "order_success.html")
 
 @login_required
+def order_error(request):
+    message = request.GET.get('message') or "Payment failed. Please try another method."
+    return render(request, "order_error.html", {"message": message})
+
+@login_required
 def update_cart(request, item_id):
     item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
     if request.method == "POST":
@@ -187,6 +192,13 @@ def verify_payment(request):
     data = request.POST if request.method == "POST" else request.GET
     client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
+    # Helper to return error depending on AJAX vs redirect callback
+    def respond_error(message, status=400):
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        if is_ajax:
+            return JsonResponse({"status": "failed", "message": message}, status=status)
+        return redirect(f"{reverse('order_error')}?message={message}")
+
     try:
         client.utility.verify_payment_signature({
             "razorpay_order_id": data["razorpay_order_id"],
@@ -194,7 +206,7 @@ def verify_payment(request):
             "razorpay_signature": data["razorpay_signature"],
         })
     except Exception:
-        return JsonResponse({"status": "failed", "message": "Signature verification failed"}, status=400)
+        return respond_error("Signature verification failed", status=400)
 
     # Determine user: prefer session user, else fall back to order notes
     user = request.user if request.user.is_authenticated else None
@@ -208,13 +220,13 @@ def verify_payment(request):
         except Exception:
             user = None
     if user is None:
-        return JsonResponse({"status": "failed", "message": "User not found for payment"}, status=400)
+        return respond_error("User not found for payment", status=400)
 
     # Recompute totals and create Order
     cart = get_object_or_404(Cart, user=user)
     items = cart.items.select_related("product")
     if not items.exists():
-        return JsonResponse({"status": "failed", "message": "Cart empty"}, status=400)
+        return respond_error("Cart empty", status=400)
 
     subtotal = sum(item.product.product_price * item.quantity for item in items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))

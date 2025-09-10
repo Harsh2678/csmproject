@@ -125,6 +125,10 @@ class Order(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
+    # Razorpay identifiers for reconciliation
+    razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"

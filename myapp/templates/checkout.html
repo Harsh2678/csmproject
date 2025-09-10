@@ -187,7 +187,7 @@
                             <span>${{total}}</span>
                         </div>
 
-                        <button type="submit" form="checkout-form" class="btn btn-success w-100 mt-4 btn-lg">
+                        <button type="button" id="rzp-place-order" class="btn btn-success w-100 mt-4 btn-lg">
                             <i class="bi bi-check-circle me-2"></i>Place Order
                         </button>
                     </div>
@@ -200,5 +200,126 @@
         {% include "footer.html" %}
     {% endblock %}
 
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        (function(){
+            const btn = document.getElementById('rzp-place-order');
+            const form = document.getElementById('checkout-form');
+            if(!btn || !form) return;
+
+            function clearFieldErrors(){
+                form.querySelectorAll('.field-error-msg').forEach(function(el){ el.remove(); });
+                form.querySelectorAll('.is-invalid').forEach(function(el){ el.classList.remove('is-invalid'); });
+            }
+
+            function showFieldErrors(errors){
+                if(!errors) return;
+                let firstErrorEl = null;
+                Object.keys(errors).forEach(function(name){
+                    const input = form.querySelector('[name="' + name + '"]');
+                    if(!input) return;
+                    input.classList.add('is-invalid');
+                    const msg = Array.isArray(errors[name]) ? errors[name][0] : (errors[name] || 'Invalid');
+                    const small = document.createElement('div');
+                    small.className = 'field-error-msg text-danger small mt-1';
+                    small.textContent = msg;
+                    input.insertAdjacentElement('afterend', small);
+                    if(!firstErrorEl) firstErrorEl = input;
+                });
+                if(firstErrorEl){
+                    firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstErrorEl.focus({ preventScroll: true });
+                }
+            }
+
+            function formToFormData(formEl){
+                const fd = new FormData(formEl);
+                return new URLSearchParams(fd);
+            }
+
+            btn.addEventListener('click', async function(){
+                const body = formToFormData(form);
+                try {
+                    clearFieldErrors();
+                    const res = await fetch('{% url "start_payment" %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        },
+                        body: body.toString(),
+                    });
+                    const text = await res.text();
+                    let data;
+                    try { data = JSON.parse(text); } catch(e) { data = { error: text || 'Unknown error' }; }
+                    if(res.status === 401){
+                        window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                        return;
+                    }
+                    if(!res.ok){
+                        if(data && data.errors){
+                            showFieldErrors(data.errors);
+                        }
+                        const errorMsg = data && (data.error || (data.errors ? '' : JSON.stringify(data)));
+                        alert('Unable to start payment. ' + (errorMsg || '')); 
+                        return;
+                    }
+                    const contentType = res.headers.get('content-type') || '';
+                    if (!contentType.includes('application/json') || !data || !data.order) {
+                        console.error('Unexpected response from start_payment:', text);
+                        alert('Unable to start payment. You may not be logged in or the server returned HTML.');
+                        return;
+                    }
+
+                    const options = {
+                        key: data.razorpay_key,
+                        amount: data.amount,
+                        currency: data.currency,
+                        name: data.name,
+                        description: data.description,
+                        order_id: data.order.id,
+                        prefill: data.prefill,
+                        handler: async function (response){
+                            const verifyRes = await fetch('{% url "verify_payment" %}', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value },
+                                body: new URLSearchParams({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                })
+                            });
+                            const verifyText = await verifyRes.text();
+                            let verifyData;
+                            try { verifyData = JSON.parse(verifyText); } catch(e) { verifyData = { status: 'failed', message: verifyText || 'Unknown verification error' }; }
+                            if(verifyRes.status === 401){
+                                window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                                return;
+                            }
+                            if(verifyRes.ok && verifyData.status === 'success'){
+                                window.location.href = verifyData.redirect_url;
+                            } else {
+                                alert('Payment verification failed. ' + (verifyData.message || ''));
+                            }
+                        },
+                        theme: { color: '#0d6efd' }
+                    };
+                    if(typeof Razorpay === 'undefined'){
+                        alert('Razorpay SDK failed to load. Please check your network.');
+                        return;
+                    }
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (resp) {
+                        const detail = resp && resp.error ? (resp.error.description || resp.error.reason || resp.error.code) : '';
+                        alert('Payment failed. ' + (detail || ''));
+                    });
+                    rzp.open();
+                } catch (e) {
+                    console.error('Start payment error:', e);
+                    alert('Error starting payment. Is the server running at 127.0.0.1:8000?');
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

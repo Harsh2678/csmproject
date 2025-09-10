@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 SITE_ID = 1
+RAZORPAY_KEY_ID = "rzp_test_RFmGgFNYctAeks"
+RAZORPAY_KEY_SECRET = "0KzXGo8pzXgMtkJgbsidWTIT"
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",

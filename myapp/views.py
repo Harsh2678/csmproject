@@ -1,8 +1,16 @@
 from django.shortcuts import redirect, render, get_object_or_404
+try:
+    import razorpay  # type: ignore
+except Exception:
+    razorpay = None
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from cmsproject.models import Category, SubCategory, Product, Cart, CartItem, Order, OrderItem, ShippingInfo
 from .forms import ShippingInfoForm
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 def home(request):
     categories = Category.objects.all()
@@ -77,37 +85,7 @@ def checkout(request):
     subtotal = sum(item.product.product_price * item.quantity for item in items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
     total = (subtotal + tax).quantize(Decimal('0.01'))
-    if request.method == "POST":
-        if not items.exists():
-            return redirect("cart")
-        form = ShippingInfoForm(request.POST)
-        if not form.is_valid():
-            return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total, "form": form})
-        order = Order.objects.create(
-            user=request.user,
-            subtotal=subtotal,
-            tax_amount=tax,
-            total_price=total,
-        )
-        shipping = form.save(commit=False)
-        shipping.user = request.user
-        shipping.order = order
-        shipping.save()
-        for item in items:
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                quantity=item.quantity,
-                unit_price=item.product.product_price,
-                line_total=item.product.product_price * item.quantity,
-            )
-        # clear cart
-        items.delete()
-        cart.cart_subtotal = Decimal('0.00')
-        cart.tax_amount = Decimal('0.00')
-        cart.cart_total = Decimal('0.00')
-        cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
-        return redirect("order_success")
+    # Only render; order is created after successful payment
     return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total, "form": ShippingInfoForm()})
 
 
@@ -141,3 +119,131 @@ def order(request):
     return render(request, "order.html", {
         'orders': orders,
     })
+
+@require_POST
+def start_payment(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    """Validate shipping, create a Razorpay order for the cart total, store shipping in session."""
+    cart = get_object_or_404(Cart, user=request.user)
+    items = cart.items.select_related("product")
+    if not items.exists():
+        return JsonResponse({"error": "Cart is empty"}, status=400)
+
+    form = ShippingInfoForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors}, status=400)
+
+    subtotal = sum(item.product.product_price * item.quantity for item in items)
+    tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
+    total = (subtotal + tax).quantize(Decimal('0.01'))
+
+    amount_paise = int(total * 100)
+    if razorpay is None:
+        return JsonResponse({"error": "Razorpay SDK not installed"}, status=500)
+    try:
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        order = client.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "payment_capture": 1,
+            "notes": {
+                "user_id": str(request.user.id),
+            },
+            "receipt": f"rcpt_{request.user.id}_{cart.id}",
+        })
+    except Exception as exc:
+        return JsonResponse({"error": f"Failed to create Razorpay order: {exc}"}, status=500)
+
+    # Save shipping temporarily in session to use after verification
+    request.session['pending_shipping'] = form.cleaned_data
+    request.session['pending_razorpay_order_id'] = order.get('id')
+
+    return JsonResponse({
+        "razorpay_key": settings.RAZORPAY_KEY_ID,
+        "order": order,
+        "amount": amount_paise,
+        "currency": "INR",
+        "name": "ShopEase",
+        "description": "Order Payment",
+        "prefill": {
+            "name": f"{form.cleaned_data.get('shipping_first_name')} {form.cleaned_data.get('shipping_last_name')}",
+            "email": form.cleaned_data.get('shipping_email'),
+            "contact": form.cleaned_data.get('shipping_phone_number'),
+        }
+    })
+
+@require_POST
+def verify_payment(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"status": "failed", "message": "Authentication required"}, status=401)
+    if razorpay is None:
+        return JsonResponse({"status": "failed", "message": "Razorpay SDK not installed"}, status=500)
+    data = request.POST
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+    try:
+        client.utility.verify_payment_signature({
+            "razorpay_order_id": data["razorpay_order_id"],
+            "razorpay_payment_id": data["razorpay_payment_id"],
+            "razorpay_signature": data["razorpay_signature"],
+        })
+    except Exception:
+        return JsonResponse({"status": "failed", "message": "Signature verification failed"}, status=400)
+
+    # Recompute totals and create Order
+    cart = get_object_or_404(Cart, user=request.user)
+    items = cart.items.select_related("product")
+    if not items.exists():
+        return JsonResponse({"status": "failed", "message": "Cart empty"}, status=400)
+
+    subtotal = sum(item.product.product_price * item.quantity for item in items)
+    tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
+    total = (subtotal + tax).quantize(Decimal('0.01'))
+
+    order_obj = Order.objects.create(
+        user=request.user,
+        subtotal=subtotal,
+        tax_amount=tax,
+        total_price=total,
+        razorpay_order_id=data.get("razorpay_order_id"),
+        razorpay_payment_id=data.get("razorpay_payment_id"),
+        razorpay_signature=data.get("razorpay_signature"),
+    )
+
+    for item in items:
+        OrderItem.objects.create(
+            order=order_obj,
+            product=item.product,
+            quantity=item.quantity,
+            unit_price=item.product.product_price,
+            line_total=item.product.product_price * item.quantity,
+        )
+
+    shipping_data = request.session.pop('pending_shipping', None)
+    if shipping_data:
+        ShippingInfo.objects.create(
+            order=order_obj,
+            user=request.user,
+            shipping_first_name=shipping_data.get('shipping_first_name'),
+            shipping_last_name=shipping_data.get('shipping_last_name'),
+            shipping_email=shipping_data.get('shipping_email'),
+            shipping_phone_number=shipping_data.get('shipping_phone_number'),
+            shipping_address=shipping_data.get('shipping_address'),
+            shipping_city=shipping_data.get('shipping_city'),
+            shipping_zipcode=shipping_data.get('shipping_zipcode'),
+            shipping_state=shipping_data.get('shipping_state'),
+        )
+
+    # Clear cart
+    items.delete()
+    cart.cart_subtotal = Decimal('0.00')
+    cart.tax_amount = Decimal('0.00')
+    cart.cart_total = Decimal('0.00')
+    cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
+
+    # Cleanup session
+    request.session.pop('pending_razorpay_order_id', None)
+
+    return JsonResponse({"status": "success", "redirect_url": redirect("order_success").url})
+

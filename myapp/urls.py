@@ -13,4 +13,6 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("order/success/", views.order_success, name="order_success"),
     path("order/", views.order, name="order"),
+    path("payment/start/", views.start_payment, name="start_payment"),
+    path("payment/verify/", views.verify_payment, name="verify_payment"),
 ]

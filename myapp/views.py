@@ -11,6 +11,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 def home(request):
     categories = Category.objects.all()
@@ -139,6 +141,9 @@ def start_payment(request):
     total = (subtotal + tax).quantize(Decimal('0.01'))
 
     amount_paise = int(total * 100)
+    # Razorpay requires minimum amount of 100 paise (₹1)
+    if amount_paise < 100:
+        amount_paise = 100
     if razorpay is None:
         return JsonResponse({"error": "Razorpay SDK not installed"}, status=500)
     try:
@@ -159,6 +164,7 @@ def start_payment(request):
     request.session['pending_shipping'] = form.cleaned_data
     request.session['pending_razorpay_order_id'] = order.get('id')
 
+    callback_url = request.build_absolute_uri(reverse("verify_payment"))
     return JsonResponse({
         "razorpay_key": settings.RAZORPAY_KEY_ID,
         "order": order,
@@ -166,6 +172,7 @@ def start_payment(request):
         "currency": "INR",
         "name": "ShopEase",
         "description": "Order Payment",
+        "callback_url": callback_url,
         "prefill": {
             "name": f"{form.cleaned_data.get('shipping_first_name')} {form.cleaned_data.get('shipping_last_name')}",
             "email": form.cleaned_data.get('shipping_email'),
@@ -173,13 +180,11 @@ def start_payment(request):
         }
     })
 
-@require_POST
+@csrf_exempt
 def verify_payment(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"status": "failed", "message": "Authentication required"}, status=401)
     if razorpay is None:
         return JsonResponse({"status": "failed", "message": "Razorpay SDK not installed"}, status=500)
-    data = request.POST
+    data = request.POST if request.method == "POST" else request.GET
     client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
     try:
@@ -191,8 +196,22 @@ def verify_payment(request):
     except Exception:
         return JsonResponse({"status": "failed", "message": "Signature verification failed"}, status=400)
 
+    # Determine user: prefer session user, else fall back to order notes
+    user = request.user if request.user.is_authenticated else None
+    if user is None:
+        try:
+            rp_order = client.order.fetch(data.get("razorpay_order_id"))
+            user_id_str = (rp_order.get("notes") or {}).get("user_id")
+            if user_id_str:
+                UserModel = get_user_model()
+                user = UserModel.objects.get(pk=int(user_id_str))
+        except Exception:
+            user = None
+    if user is None:
+        return JsonResponse({"status": "failed", "message": "User not found for payment"}, status=400)
+
     # Recompute totals and create Order
-    cart = get_object_or_404(Cart, user=request.user)
+    cart = get_object_or_404(Cart, user=user)
     items = cart.items.select_related("product")
     if not items.exists():
         return JsonResponse({"status": "failed", "message": "Cart empty"}, status=400)
@@ -202,13 +221,15 @@ def verify_payment(request):
     total = (subtotal + tax).quantize(Decimal('0.01'))
 
     order_obj = Order.objects.create(
-        user=request.user,
+        user=user,
         subtotal=subtotal,
         tax_amount=tax,
         total_price=total,
         razorpay_order_id=data.get("razorpay_order_id"),
         razorpay_payment_id=data.get("razorpay_payment_id"),
         razorpay_signature=data.get("razorpay_signature"),
+        payment_method="razorpay",
+        payment_status="paid",
     )
 
     for item in items:
@@ -224,7 +245,7 @@ def verify_payment(request):
     if shipping_data:
         ShippingInfo.objects.create(
             order=order_obj,
-            user=request.user,
+            user=user,
             shipping_first_name=shipping_data.get('shipping_first_name'),
             shipping_last_name=shipping_data.get('shipping_last_name'),
             shipping_email=shipping_data.get('shipping_email'),
@@ -242,8 +263,37 @@ def verify_payment(request):
     cart.cart_total = Decimal('0.00')
     cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
 
+    # Attempt to fetch and store more payment details (best-effort)
+    try:
+        payment_info = client.payment.fetch(data.get("razorpay_payment_id"))
+        if payment_info:
+            order_obj.payment_details = payment_info
+            method = payment_info.get('method')
+            if method:
+                order_obj.payment_method = method
+            # Extract method-specific fields
+            if method == 'upi':
+                order_obj.upi_vpa = payment_info.get('vpa')
+            elif method == 'card':
+                order_obj.card_last4 = payment_info.get('card', {}).get('last4') if isinstance(payment_info.get('card'), dict) else payment_info.get('last4')
+                order_obj.card_network = payment_info.get('card', {}).get('network') if isinstance(payment_info.get('card'), dict) else payment_info.get('network')
+                order_obj.card_type = payment_info.get('card', {}).get('type') if isinstance(payment_info.get('card'), dict) else payment_info.get('type')
+            elif method == 'netbanking':
+                order_obj.bank_name = payment_info.get('bank') or payment_info.get('bank_name')
+            elif method == 'wallet':
+                order_obj.wallet_provider = payment_info.get('wallet') or payment_info.get('provider')
+            order_obj.save(update_fields=[
+                "payment_details", "payment_method", "upi_vpa", "card_last4", "card_network", "card_type", "bank_name", "wallet_provider"
+            ])
+    except Exception:
+        pass
+
     # Cleanup session
     request.session.pop('pending_razorpay_order_id', None)
 
+    # If called via Razorpay redirect (netbanking), send an HTTP redirect to success page
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if not is_ajax:
+        return redirect("order_success")
     return JsonResponse({"status": "success", "redirect_url": redirect("order_success").url})
 

@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 
 def home(request):
     categories = Category.objects.all()
@@ -159,6 +160,14 @@ def start_payment(request):
             "payment_capture": 1,
             "notes": {
                 "user_id": str(request.user.id),
+                "shipping_first_name": form.cleaned_data.get('shipping_first_name') or '',
+                "shipping_last_name": form.cleaned_data.get('shipping_last_name') or '',
+                "shipping_email": form.cleaned_data.get('shipping_email') or '',
+                "shipping_phone_number": form.cleaned_data.get('shipping_phone_number') or '',
+                "shipping_address": form.cleaned_data.get('shipping_address') or '',
+                "shipping_city": form.cleaned_data.get('shipping_city') or '',
+                "shipping_state": form.cleaned_data.get('shipping_state') or '',
+                "shipping_zipcode": form.cleaned_data.get('shipping_zipcode') or '',
             },
             "receipt": f"rcpt_{request.user.id}_{cart.id}",
         })
@@ -267,6 +276,58 @@ def verify_payment(request):
             shipping_zipcode=shipping_data.get('shipping_zipcode'),
             shipping_state=shipping_data.get('shipping_state'),
         )
+        # Send order confirmation email to shipping email
+        try:
+            to_email = shipping_data.get('shipping_email')
+            if to_email:
+                subject = f"Order #{order_obj.id} confirmed"
+                body = (
+                    f"Hello {shipping_data.get('shipping_first_name')} {shipping_data.get('shipping_last_name')},\n\n"
+                    f"Thank you for your purchase! Your order #{order_obj.id} has been placed successfully.\n"
+                    f"Total: ₹{order_obj.total_price}\n"
+                    f"Payment method: {order_obj.payment_method or 'razorpay'}\n\n"
+                    f"We will notify you once your order is shipped."
+                )
+                # Set fail_silently=False so exceptions are visible in logs
+                send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_email], fail_silently=False)
+        except Exception as e:
+            import logging
+            logging.getLogger('django.core.mail').exception("Error sending order confirmation email: %s", e)
+
+    # Fallback: for redirect flows where session may be missing, rebuild from Razorpay order notes
+    if not shipping_data:
+        try:
+            rp_order = client.order.fetch(data.get('razorpay_order_id'))
+            notes = rp_order.get('notes') or {}
+            to_email = notes.get('shipping_email')
+            if to_email:
+                ShippingInfo.objects.create(
+                    order=order_obj,
+                    user=user,
+                    shipping_first_name=notes.get('shipping_first_name') or '',
+                    shipping_last_name=notes.get('shipping_last_name') or '',
+                    shipping_email=to_email,
+                    shipping_phone_number=notes.get('shipping_phone_number') or '',
+                    shipping_address=notes.get('shipping_address') or '',
+                    shipping_city=notes.get('shipping_city') or '',
+                    shipping_zipcode=notes.get('shipping_zipcode') or '',
+                    shipping_state=notes.get('shipping_state') or '',
+                )
+                try:
+                    subject = f"Order #{order_obj.id} confirmed"
+                    body = (
+                        f"Hello {notes.get('shipping_first_name', '')} {notes.get('shipping_last_name', '')},\n\n"
+                        f"Thank you for your purchase! Your order #{order_obj.id} has been placed successfully.\n"
+                        f"Total: ₹{order_obj.total_price}\n"
+                        f"Payment method: {order_obj.payment_method or 'razorpay'}\n\n"
+                        f"We will notify you once your order is shipped."
+                    )
+                    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_email], fail_silently=False)
+                except Exception as e:
+                    import logging
+                    logging.getLogger('django.core.mail').exception("Fallback email send failed: %s", e)
+        except Exception:
+            pass
 
     # Clear cart
     items.delete()

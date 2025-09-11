@@ -101,6 +101,25 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="fw-bold mb-3">Payment</h6>
+                                            <div class="small text-muted">Status: <span class="badge bg-{% if order.payment_status == 'paid' %}success{% elif order.payment_status == 'failed' %}danger{% else %}secondary{% endif %}">{{ order.payment_status|title }}</span></div>
+                                            <div class="small">Method: {{ order.payment_method|default:'—' }}</div>
+                                            <div class="small">Razorpay Order ID: {{ order.razorpay_order_id|default:'—' }}</div>
+                                            <div class="small">Razorpay Payment ID: {{ order.razorpay_payment_id|default:'—' }}</div>
+                                            {% if order.payment_method == 'upi' and order.upi_vpa %}
+                                                <div class="small">UPI ID: {{ order.upi_vpa }}</div>
+                                            {% elif order.payment_method == 'card' %}
+                                                <div class="small">Card: {{ order.card_network|default:'Card' }} •••• {{ order.card_last4|default:'XXXX' }} ({{ order.card_type|default:'—' }})</div>
+                                            {% elif order.payment_method == 'netbanking' and order.bank_name %}
+                                                <div class="small">Bank: {{ order.bank_name }}</div>
+                                            {% elif order.payment_method == 'wallet' and order.wallet_provider %}
+                                                <div class="small">Wallet: {{ order.wallet_provider }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

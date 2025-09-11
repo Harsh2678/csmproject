@@ -28,6 +28,9 @@ def home(request):
 def about(request):
     return render(request, "about.html")
 
+def list_categories(request):
+    categories = Category.objects.all().order_by('category_name')
+    return render(request, "list_categories.html", {"categories": categories})
 
 def subcategories(request, category_id):
     category = get_object_or_404(Category, pk=category_id)
@@ -44,6 +47,11 @@ def products(request):
         'products': products
     }
     return render(request, "products.html", context)
+
+def products_by_subcategory(request, subcategory_id):
+    subcategory = get_object_or_404(SubCategory, pk=subcategory_id)
+    products = Product.objects.filter(sub_category=subcategory).order_by('-id')
+    return render(request, "products.html", {"products": products, "subcategory": subcategory})
 
 @login_required
 def add_to_cart(request, product_id):

@@ -3,9 +3,11 @@ from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("list_categories/", views.list_categories, name="list_categories"),
     path("about/", views.about, name="about"),
     path("category/<int:category_id>/", views.subcategories, name="category_subcategories"),
     path("products/", views.products, name="products"),
+    path("products/sub/<int:subcategory_id>/", views.products_by_subcategory, name="products_by_subcategory"),
     path("cart/add/<int:product_id>/", views.add_to_cart, name="add_to_cart"),
     path("cart/", views.cart_view, name="cart"),
     path("cart/update/<int:item_id>/", views.update_cart, name="update_cart"),

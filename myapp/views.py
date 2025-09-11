@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
+from django.utils.http import urlencode
 
 def home(request):
     categories = Category.objects.all()
@@ -43,24 +44,103 @@ def subcategories(request, category_id):
     return render(request, "subcategories.html", context)
 
 def products(request):
-    products_qs = Product.objects.order_by('-id')
+    products_qs = Product.objects.all()
+    q = (request.GET.get('q') or '').strip()
+    min_price = (request.GET.get('min_price') or '').strip()
+    max_price = (request.GET.get('max_price') or '').strip()
+    sort = (request.GET.get('sort') or '').strip()
+
+    if q:
+        products_qs = products_qs.filter(product_name__icontains=q)
+    if min_price:
+        try:
+            products_qs = products_qs.filter(product_price__gte=min_price)
+        except Exception:
+            pass
+    if max_price:
+        try:
+            products_qs = products_qs.filter(product_price__lte=max_price)
+        except Exception:
+            pass
+
+    if sort == 'name_asc':
+        products_qs = products_qs.order_by('product_name')
+    elif sort == 'name_desc':
+        products_qs = products_qs.order_by('-product_name')
+    else:
+        products_qs = products_qs.order_by('-id')
+
     paginator = Paginator(products_qs, 12)
     page_number = request.GET.get("page")
     products_page = paginator.get_page(page_number)
+
+    # Preserve filters in pagination links
+    querydict = request.GET.copy()
+    if 'page' in querydict:
+        del querydict['page']
+    querystring = querydict.urlencode()
+
     context = {
         'products': products_page,
         'page_obj': products_page,
         'paginator': paginator,
+        'q': q,
+        'min_price': min_price,
+        'max_price': max_price,
+        'sort': sort,
+        'querystring': querystring,
     }
     return render(request, "products.html", context)
 
 def products_by_subcategory(request, subcategory_id):
     subcategory = get_object_or_404(SubCategory, pk=subcategory_id)
-    products_qs = Product.objects.filter(sub_category=subcategory).order_by('-id')
+    products_qs = Product.objects.filter(sub_category=subcategory)
+
+    q = (request.GET.get('q') or '').strip()
+    min_price = (request.GET.get('min_price') or '').strip()
+    max_price = (request.GET.get('max_price') or '').strip()
+    sort = (request.GET.get('sort') or '').strip()
+
+    if q:
+        products_qs = products_qs.filter(product_name__icontains=q)
+    if min_price:
+        try:
+            products_qs = products_qs.filter(product_price__gte=min_price)
+        except Exception:
+            pass
+    if max_price:
+        try:
+            products_qs = products_qs.filter(product_price__lte=max_price)
+        except Exception:
+            pass
+
+    if sort == 'name_asc':
+        products_qs = products_qs.order_by('product_name')
+    elif sort == 'name_desc':
+        products_qs = products_qs.order_by('-product_name')
+    else:
+        products_qs = products_qs.order_by('-id')
+
     paginator = Paginator(products_qs, 12)
     page_number = request.GET.get("page")
     products_page = paginator.get_page(page_number)
-    return render(request, "products.html", {"products": products_page, "subcategory": subcategory, "page_obj": products_page, "paginator": paginator})
+
+    querydict = request.GET.copy()
+    if 'page' in querydict:
+        del querydict['page']
+    querystring = querydict.urlencode()
+
+    return render(request, "products.html", {
+        "products": products_page,
+        "subcategory": subcategory,
+        "page_obj": products_page,
+        "paginator": paginator,
+        'q': q,
+        'min_price': min_price,
+        'max_price': max_price,
+        'sort': sort,
+        'querystring': querystring,
+    })
 
 @login_required
 def add_to_cart(request, product_id):

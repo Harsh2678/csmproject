@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator
 
 def home(request):
     categories = Category.objects.all()
@@ -42,16 +43,24 @@ def subcategories(request, category_id):
     return render(request, "subcategories.html", context)
 
 def products(request):
-    products = Product.objects.order_by('-id')
+    products_qs = Product.objects.order_by('-id')
+    paginator = Paginator(products_qs, 12)
+    page_number = request.GET.get("page")
+    products_page = paginator.get_page(page_number)
     context = {
-        'products': products
+        'products': products_page,
+        'page_obj': products_page,
+        'paginator': paginator,
     }
     return render(request, "products.html", context)
 
 def products_by_subcategory(request, subcategory_id):
     subcategory = get_object_or_404(SubCategory, pk=subcategory_id)
-    products = Product.objects.filter(sub_category=subcategory).order_by('-id')
-    return render(request, "products.html", {"products": products, "subcategory": subcategory})
+    products_qs = Product.objects.filter(sub_category=subcategory).order_by('-id')
+    paginator = Paginator(products_qs, 12)
+    page_number = request.GET.get("page")
+    products_page = paginator.get_page(page_number)
+    return render(request, "products.html", {"products": products_page, "subcategory": subcategory, "page_obj": products_page, "paginator": paginator})
 
 @login_required
 def add_to_cart(request, product_id):
@@ -132,9 +141,14 @@ def remove_from_cart(request, item_id):
 # duplicate checkout removed
 @login_required
 def order(request):
-    orders = Order.objects.filter(user=request.user).order_by("-created_at")
+    orders_qs = Order.objects.filter(user=request.user).order_by("-created_at")
+    paginator = Paginator(orders_qs, 12)
+    page_number = request.GET.get("page")
+    orders_page = paginator.get_page(page_number)
     return render(request, "order.html", {
-        'orders': orders,
+        'orders': orders_page,
+        'page_obj': orders_page,
+        'paginator': paginator,
     })
 
 @require_POST

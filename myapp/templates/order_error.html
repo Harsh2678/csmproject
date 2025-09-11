@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .icon-xl { font-size: 4rem; }
+    </style>
+</head>
+<body>
+    {% include "navigation.html" %}
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="text-danger icon-xl mb-3">✖</div>
+                <h1 class="fw-bold mb-3">Payment Failed</h1>
+                <p class="lead text-muted mb-4">{{ message|default:"We couldn't complete your payment." }}</p>
+
+                <div class="card text-start">
+                    <div class="card-body">
+                        <h5 class="card-title">What you can do</h5>
+                        <ul class="mb-0">
+                            <li>Try a different payment method (Card/UPI/Netbanking/Wallet).</li>
+                            <li>Ensure your bank allows online transactions.</li>
+                            <li>If the issue persists, contact support.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2 justify-content-center">
+                    <a class="btn btn-primary" href="{% url 'checkout' %}">Back to Checkout</a>
+                    <a class="btn btn-outline-secondary" href="{% url 'cart' %}">View Cart</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "footer.html" %}
+</body>
+</html>
+

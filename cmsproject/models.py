@@ -125,6 +125,36 @@ class Order(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
+    # Razorpay identifiers for reconciliation
+    razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
+    # Payment summary
+    PAYMENT_METHOD_CHOICES = [
+        ("razorpay", "Razorpay"),
+        ("cod", "Cash on Delivery"),
+        ("card", "Card"),
+        ("upi", "UPI"),
+        ("netbanking", "Netbanking"),
+        ("wallet", "Wallet"),
+    ]
+    PAYMENT_STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("paid", "Paid"),
+        ("failed", "Failed"),
+        ("refunded", "Refunded"),
+    ]
+    payment_method = models.CharField(max_length=32, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    payment_status = models.CharField(max_length=16, choices=PAYMENT_STATUS_CHOICES, default="pending")
+    from django.db.models import JSONField as BuiltinJSONField
+    payment_details = BuiltinJSONField(null=True, blank=True)
+    # Convenience fields by method
+    upi_vpa = models.CharField(max_length=255, null=True, blank=True)
+    card_last4 = models.CharField(max_length=4, null=True, blank=True)
+    card_network = models.CharField(max_length=64, null=True, blank=True)
+    card_type = models.CharField(max_length=32, null=True, blank=True)
+    bank_name = models.CharField(max_length=128, null=True, blank=True)
+    wallet_provider = models.CharField(max_length=64, null=True, blank=True)
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"

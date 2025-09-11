@@ -13,7 +13,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 
 def home(request):
     categories = Category.objects.all()
@@ -233,11 +234,11 @@ def verify_payment(request):
 
     # Recompute totals and create Order
     cart = get_object_or_404(Cart, user=user)
-    items = cart.items.select_related("product")
-    if not items.exists():
+    cart_items = cart.items.select_related("product")
+    if not cart_items.exists():
         return respond_error("Cart empty", status=400)
 
-    subtotal = sum(item.product.product_price * item.quantity for item in items)
+    subtotal = sum(item.product.product_price * item.quantity for item in cart_items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
     total = (subtotal + tax).quantize(Decimal('0.01'))
 
@@ -253,7 +254,7 @@ def verify_payment(request):
         payment_status="paid",
     )
 
-    for item in items:
+    for item in cart_items:
         OrderItem.objects.create(
             order=order_obj,
             product=item.product,
@@ -276,20 +277,37 @@ def verify_payment(request):
             shipping_zipcode=shipping_data.get('shipping_zipcode'),
             shipping_state=shipping_data.get('shipping_state'),
         )
-        # Send order confirmation email to shipping email
+        # Send order confirmation email (HTML template)
         try:
             to_email = shipping_data.get('shipping_email')
             if to_email:
                 subject = f"Order #{order_obj.id} confirmed"
-                body = (
-                    f"Hello {shipping_data.get('shipping_first_name')} {shipping_data.get('shipping_last_name')},\n\n"
-                    f"Thank you for your purchase! Your order #{order_obj.id} has been placed successfully.\n"
-                    f"Total: ₹{order_obj.total_price}\n"
-                    f"Payment method: {order_obj.payment_method or 'razorpay'}\n\n"
-                    f"We will notify you once your order is shipped."
-                )
-                # Set fail_silently=False so exceptions are visible in logs
-                send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_email], fail_silently=False)
+                # Build absolute base URL for images in email
+                base_url = request.build_absolute_uri("/").rstrip("/")
+                items = list(order_obj.items.select_related('product'))
+                context = {"order": order_obj, "shipping": ShippingInfo.objects.filter(order=order_obj).first(), "base_url": base_url}
+                html_body = render_to_string("emails/order_confirmation.html", context)
+                text_body = f"Your order #{order_obj.id} has been placed. Total: ₹{order_obj.total_price}"
+                msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [to_email])
+                msg.attach_alternative(html_body, "text/html")
+                # Try embedding images as inline attachments (some clients block external http URLs)
+                try:
+                    from email.mime.image import MIMEImage
+                    for item in items:
+                        prod = item.product
+                        if getattr(prod, 'product_image', None) and getattr(prod.product_image, 'path', None):
+                            with open(prod.product_image.path, 'rb') as f:
+                                img = MIMEImage(f.read())
+                                img.add_header('Content-ID', f'<prod_{item.id}>')
+                                img.add_header('Content-Disposition', 'inline', filename=f'prod_{item.id}.jpg')
+                                msg.attach(img)
+                    # Provide a simple cid map flag to the template
+                    context.update({"cid_map": {"item_ids": [i.id for i in items]}})
+                    html_body = render_to_string("emails/order_confirmation.html", context)
+                    msg.attach_alternative(html_body, "text/html")
+                except Exception:
+                    pass
+                msg.send(fail_silently=False)
         except Exception as e:
             import logging
             logging.getLogger('django.core.mail').exception("Error sending order confirmation email: %s", e)
@@ -315,14 +333,29 @@ def verify_payment(request):
                 )
                 try:
                     subject = f"Order #{order_obj.id} confirmed"
-                    body = (
-                        f"Hello {notes.get('shipping_first_name', '')} {notes.get('shipping_last_name', '')},\n\n"
-                        f"Thank you for your purchase! Your order #{order_obj.id} has been placed successfully.\n"
-                        f"Total: ₹{order_obj.total_price}\n"
-                        f"Payment method: {order_obj.payment_method or 'razorpay'}\n\n"
-                        f"We will notify you once your order is shipped."
-                    )
-                    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_email], fail_silently=False)
+                    base_url = request.build_absolute_uri("/").rstrip("/")
+                    items = list(order_obj.items.select_related('product'))
+                    context = {"order": order_obj, "shipping": ShippingInfo.objects.filter(order=order_obj).first(), "base_url": base_url}
+                    html_body = render_to_string("emails/order_confirmation.html", context)
+                    text_body = f"Your order #{order_obj.id} has been placed. Total: ₹{order_obj.total_price}"
+                    msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [to_email])
+                    msg.attach_alternative(html_body, "text/html")
+                    try:
+                        from email.mime.image import MIMEImage
+                        for item in items:
+                            prod = item.product
+                            if getattr(prod, 'product_image', None) and getattr(prod.product_image, 'path', None):
+                                with open(prod.product_image.path, 'rb') as f:
+                                    img = MIMEImage(f.read())
+                                    img.add_header('Content-ID', f'<prod_{item.id}>')
+                                    img.add_header('Content-Disposition', 'inline', filename=f'prod_{item.id}.jpg')
+                                    msg.attach(img)
+                        context.update({"cid_map": {"item_ids": [i.id for i in items]}})
+                        html_body = render_to_string("emails/order_confirmation.html", context)
+                        msg.attach_alternative(html_body, "text/html")
+                    except Exception:
+                        pass
+                    msg.send(fail_silently=False)
                 except Exception as e:
                     import logging
                     logging.getLogger('django.core.mail').exception("Fallback email send failed: %s", e)
@@ -330,7 +363,7 @@ def verify_payment(request):
             pass
 
     # Clear cart
-    items.delete()
+    cart.items.all().delete()
     cart.cart_subtotal = Decimal('0.00')
     cart.tax_amount = Decimal('0.00')
     cart.cart_total = Decimal('0.00')
@@ -364,9 +397,12 @@ def verify_payment(request):
     # Cleanup session
     request.session.pop('pending_razorpay_order_id', None)
 
-    # If called via Razorpay redirect (netbanking), send an HTTP redirect to success page
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-    if not is_ajax:
+    # For redirect-based flows (typically GET callbacks), send an HTTP redirect to success page
+    if request.method == "GET":
         return redirect("order_success")
-    return JsonResponse({"status": "success", "redirect_url": redirect("order_success").url})
+    # For AJAX (popup) flows, return JSON so client JS can redirect
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if is_ajax:
+        return JsonResponse({"status": "success", "redirect_url": redirect("order_success").url})
+    return redirect("order_success")
 

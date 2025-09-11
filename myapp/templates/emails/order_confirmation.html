@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Confirmation</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #222; }
+    .wrapper { max-width: 640px; margin: 0 auto; padding: 16px; }
+    .header { background: #0d6efd; color: #fff; padding: 16px; border-radius: 8px 8px 0 0; }
+    .content { border: 1px solid #eee; border-top: 0; padding: 16px; border-radius: 0 0 8px 8px; }
+    .muted { color: #666; font-size: 13px; }
+    .totals { margin-top: 12px; }
+    .totals td { padding: 4px 0; }
+    .items { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .items th, .items td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eee; font-size: 14px; }
+  </style>
+  </head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h2 style="margin:0">Order #{{ order.id }} confirmed</h2>
+      <div class="muted">Thanks for your purchase, {{ shipping.shipping_first_name }} {{ shipping.shipping_last_name }}!</div>
+    </div>
+    <div class="content">
+      <p>
+        We’ve received your order placed on {{ order.created_at|date:"F j, Y, g:i a" }}.
+        Below are your order details.
+      </p>
+
+      <h3 style="margin-bottom:6px">Items</h3>
+      <table class="items">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Image</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+          <tr>
+            <td>{{ item.product.product_name }}</td>
+            <td>
+              {% if item.product.product_image %}
+                {% if cid_map and cid_map.item_ids and item.id in cid_map.item_ids %}
+                  <img src="cid:prod_{{ item.id }}" alt="{{ item.product.product_name }}" width="64" height="64" style="object-fit:cover;border-radius:6px;">
+                {% else %}
+                  <img src="{{ base_url }}{{ item.product.product_image.url }}" alt="{{ item.product.product_name }}" width="64" height="64" style="object-fit:cover;border-radius:6px;">
+                {% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ item.quantity }}</td>
+            <td>₹{{ item.unit_price }}</td>
+            <td>₹{{ item.line_total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <table class="totals">
+        <tr><td>Subtotal:</td><td><strong>₹{{ order.subtotal }}</strong></td></tr>
+        <tr><td>Tax:</td><td><strong>₹{{ order.tax_amount }}</strong></td></tr>
+        <tr><td>Total:</td><td><strong>₹{{ order.total_price }}</strong></td></tr>
+        <tr><td>Payment:</td><td><strong>{{ order.payment_method|default:'Razorpay'|title }}</strong></td></tr>
+        {% if order.razorpay_payment_id %}
+          <tr><td>Payment ID:</td><td><strong>{{ order.razorpay_payment_id }}</strong></td></tr>
+        {% endif %}
+        {% if order.razorpay_order_id %}
+          <tr><td>Gateway Order:</td><td><strong>{{ order.razorpay_order_id }}</strong></td></tr>
+        {% endif %}
+        {% if order.payment_method == 'upi' and order.upi_vpa %}
+          <tr><td>UPI ID:</td><td><strong>{{ order.upi_vpa }}</strong></td></tr>
+        {% elif order.payment_method == 'card' %}
+          <tr><td>Card:</td><td><strong>{{ order.card_network|default:'Card' }} •••• {{ order.card_last4|default:'XXXX' }} ({{ order.card_type|default:'—' }})</strong></td></tr>
+        {% elif order.payment_method == 'netbanking' and order.bank_name %}
+          <tr><td>Bank:</td><td><strong>{{ order.bank_name }}</strong></td></tr>
+        {% elif order.payment_method == 'wallet' and order.wallet_provider %}
+          <tr><td>Wallet:</td><td><strong>{{ order.wallet_provider }}</strong></td></tr>
+        {% endif %}
+      </table>
+
+      <h3 style="margin-bottom:6px; margin-top:16px">Shipping Address</h3>
+      <div class="muted">
+        {{ shipping.shipping_first_name }} {{ shipping.shipping_last_name }}<br>
+        {{ shipping.shipping_address }}<br>
+        {{ shipping.shipping_city }}, {{ shipping.shipping_state }} {{ shipping.shipping_zipcode }}<br>
+        {{ shipping.shipping_phone_number }} · {{ shipping.shipping_email }}
+      </div>
+
+      <p class="muted" style="margin-top:16px">You’ll receive another email when your order ships.</p>
+    </div>
+  </div>
+</body>
+</html>
+

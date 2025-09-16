@@ -6,29 +6,37 @@ except Exception:
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from cmsproject.models import Category, SubCategory, Product, Cart, CartItem, Order, OrderItem, ShippingInfo
-from .forms import ShippingInfoForm
+from .forms import ShippingInfoForm, UserProfileForm
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail, EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
-from django.utils.http import urlencode
 
 def home(request):
     categories = Category.objects.all()
     products = Product.objects.order_by('-id')[:4]
-    context = {
-        'categories': categories,
-        'products': products,
-    }
-    return render(request, "home.html", context)
+    return render(request, "home.html", {'categories': categories, 'products': products})
 
 def about(request):
     return render(request, "about.html")
+
+@login_required
+def profile(request):
+    user = request.user
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+        else:
+            return render(request, "profile.html", {"form": form})
+    else:
+        form = UserProfileForm(instance=user)
+    return render(request, "profile.html", {"form": form})
 
 def list_categories(request):
     categories = Category.objects.all().order_by('category_name')
@@ -37,11 +45,7 @@ def list_categories(request):
 def subcategories(request, category_id):
     category = get_object_or_404(Category, pk=category_id)
     sub_categories = SubCategory.objects.filter(category=category).order_by('sub_category_name')
-    context = {
-        'category': category,
-        'sub_categories': sub_categories,
-    }
-    return render(request, "subcategories.html", context)
+    return render(request, "subcategories.html", {'category': category, 'sub_categories': sub_categories})
 
 def products(request):
     products_qs = Product.objects.all()
@@ -74,7 +78,6 @@ def products(request):
     page_number = request.GET.get("page")
     products_page = paginator.get_page(page_number)
 
-    # Preserve filters in pagination links
     querydict = request.GET.copy()
     if 'page' in querydict:
         del querydict['page']
@@ -148,13 +151,12 @@ def add_to_cart(request, product_id):
 
     cart, created = Cart.objects.get_or_create(user=request.user)
 
-    # check if product already in cart
     cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
     if not created:
         cart_item.quantity += 1
         cart_item.save()
 
-    return redirect("cart")  # create a cart page view/template
+    return redirect("cart")
 
 @login_required
 def cart_view(request):
@@ -163,11 +165,12 @@ def cart_view(request):
     subtotal = sum(item.product.product_price * item.quantity for item in items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
     total = (subtotal + tax).quantize(Decimal('0.01'))
-    # persist on cart
+
     cart.cart_subtotal = subtotal
     cart.tax_amount = tax
     cart.cart_total = total
     cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
+
     return render(request, "cart.html", {
         "cart": cart,
         "subtotal": subtotal,
@@ -175,20 +178,25 @@ def cart_view(request):
         "total": total,
     })
 
-
 @login_required
 def checkout(request):
     cart = get_object_or_404(Cart, user=request.user)
     items = cart.items.select_related("product")
     if not items.exists():
         return redirect("products")
-    # compute current totals for display
+
     subtotal = sum(item.product.product_price * item.quantity for item in items)
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
     total = (subtotal + tax).quantize(Decimal('0.01'))
-    # Only render; order is created after successful payment
-    return render(request, "checkout.html", {"cart": cart, "items": items, "subtotal": subtotal, "tax": tax, "total": total, "form": ShippingInfoForm()})
 
+    return render(request, "checkout.html", {
+        "cart": cart,
+        "items": items,
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": total,
+        "form": ShippingInfoForm(),
+    })
 
 @login_required
 def order_success(request):
@@ -218,7 +226,6 @@ def remove_from_cart(request, item_id):
     item.delete()
     return redirect("cart")
 
-# duplicate checkout removed
 @login_required
 def order(request):
     orders_qs = Order.objects.filter(user=request.user).order_by("-created_at")
@@ -235,7 +242,7 @@ def order(request):
 def start_payment(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
-    """Validate shipping, create a Razorpay order for the cart total, store shipping in session."""
+
     cart = get_object_or_404(Cart, user=request.user)
     items = cart.items.select_related("product")
     if not items.exists():
@@ -250,7 +257,6 @@ def start_payment(request):
     total = (subtotal + tax).quantize(Decimal('0.01'))
 
     amount_paise = int(total * 100)
-    # Razorpay requires minimum amount of 100 paise (₹1)
     if amount_paise < 100:
         amount_paise = 100
     if razorpay is None:
@@ -277,7 +283,6 @@ def start_payment(request):
     except Exception as exc:
         return JsonResponse({"error": f"Failed to create Razorpay order: {exc}"}, status=500)
 
-    # Save shipping temporarily in session to use after verification
     request.session['pending_shipping'] = form.cleaned_data
     request.session['pending_razorpay_order_id'] = order.get('id')
 
@@ -304,7 +309,6 @@ def verify_payment(request):
     data = request.POST if request.method == "POST" else request.GET
     client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
-    # Helper to return error depending on AJAX vs redirect callback
     def respond_error(message, status=400):
         is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
         if is_ajax:
@@ -320,7 +324,6 @@ def verify_payment(request):
     except Exception:
         return respond_error("Signature verification failed", status=400)
 
-    # Determine user: prefer session user, else fall back to order notes
     user = request.user if request.user.is_authenticated else None
     if user is None:
         try:
@@ -334,7 +337,6 @@ def verify_payment(request):
     if user is None:
         return respond_error("User not found for payment", status=400)
 
-    # Recompute totals and create Order
     cart = get_object_or_404(Cart, user=user)
     cart_items = cart.items.select_related("product")
     if not cart_items.exists():
@@ -379,12 +381,10 @@ def verify_payment(request):
             shipping_zipcode=shipping_data.get('shipping_zipcode'),
             shipping_state=shipping_data.get('shipping_state'),
         )
-        # Send order confirmation email (HTML template)
         try:
             to_email = shipping_data.get('shipping_email')
             if to_email:
                 subject = f"Order #{order_obj.id} confirmed"
-                # Build absolute base URL for images in email
                 base_url = request.build_absolute_uri("/").rstrip("/")
                 items = list(order_obj.items.select_related('product'))
                 context = {"order": order_obj, "shipping": ShippingInfo.objects.filter(order=order_obj).first(), "base_url": base_url}
@@ -392,7 +392,6 @@ def verify_payment(request):
                 text_body = f"Your order #{order_obj.id} has been placed. Total: ₹{order_obj.total_price}"
                 msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [to_email])
                 msg.attach_alternative(html_body, "text/html")
-                # Try embedding images as inline attachments (some clients block external http URLs)
                 try:
                     from email.mime.image import MIMEImage
                     for item in items:
@@ -403,7 +402,6 @@ def verify_payment(request):
                                 img.add_header('Content-ID', f'<prod_{item.id}>')
                                 img.add_header('Content-Disposition', 'inline', filename=f'prod_{item.id}.jpg')
                                 msg.attach(img)
-                    # Provide a simple cid map flag to the template
                     context.update({"cid_map": {"item_ids": [i.id for i in items]}})
                     html_body = render_to_string("emails/order_confirmation.html", context)
                     msg.attach_alternative(html_body, "text/html")
@@ -414,7 +412,6 @@ def verify_payment(request):
             import logging
             logging.getLogger('django.core.mail').exception("Error sending order confirmation email: %s", e)
 
-    # Fallback: for redirect flows where session may be missing, rebuild from Razorpay order notes
     if not shipping_data:
         try:
             rp_order = client.order.fetch(data.get('razorpay_order_id'))
@@ -464,14 +461,12 @@ def verify_payment(request):
         except Exception:
             pass
 
-    # Clear cart
     cart.items.all().delete()
     cart.cart_subtotal = Decimal('0.00')
     cart.tax_amount = Decimal('0.00')
     cart.cart_total = Decimal('0.00')
     cart.save(update_fields=["cart_subtotal", "tax_amount", "cart_total"])
 
-    # Attempt to fetch and store more payment details (best-effort)
     try:
         payment_info = client.payment.fetch(data.get("razorpay_payment_id"))
         if payment_info:
@@ -479,7 +474,6 @@ def verify_payment(request):
             method = payment_info.get('method')
             if method:
                 order_obj.payment_method = method
-            # Extract method-specific fields
             if method == 'upi':
                 order_obj.upi_vpa = payment_info.get('vpa')
             elif method == 'card':
@@ -491,20 +485,19 @@ def verify_payment(request):
             elif method == 'wallet':
                 order_obj.wallet_provider = payment_info.get('wallet') or payment_info.get('provider')
             order_obj.save(update_fields=[
-                "payment_details", "payment_method", "upi_vpa", "card_last4", "card_network", "card_type", "bank_name", "wallet_provider"
+                "payment_details", "payment_method", "upi_vpa", "card_last4", "card_network",
+                "card_type", "bank_name", "wallet_provider"
             ])
     except Exception:
         pass
 
-    # Cleanup session
     request.session.pop('pending_razorpay_order_id', None)
 
-    # For redirect-based flows (typically GET callbacks), send an HTTP redirect to success page
     if request.method == "GET":
         return redirect("order_success")
-    # For AJAX (popup) flows, return JSON so client JS can redirect
+
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     if is_ajax:
         return JsonResponse({"status": "success", "redirect_url": redirect("order_success").url})
-    return redirect("order_success")
 
+    return redirect("order_success")

@@ -6,7 +6,7 @@ except Exception:
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from cmsproject.models import Category, SubCategory, Product, Cart, CartItem, Order, OrderItem, ShippingInfo
-from .forms import ShippingInfoForm, UserProfileForm
+from .forms import ShippingInfoForm, UserProfileForm, UserProfilePhotoForm
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -44,7 +44,14 @@ def about(request):
 def profile(request):
     user = request.user
     profile_form = UserProfileForm(request.POST if request.POST and 'save_profile' in request.POST else None, instance=user)
+    profile_photo_form = UserProfilePhotoForm(request.POST if request.POST and 'save_profile_photo' in request.POST else None, request.FILES if request.method == 'POST' else None, instance=user)
     password_form = PasswordChangeForm(user, request.POST if request.POST and 'change_password' in request.POST else None)
+
+    # Handle profile update
+    if request.method == "POST" and 'save_profile_photo' in request.POST:
+        if profile_photo_form.is_valid():
+            profile_photo_form.save()
+            return redirect('profile')
 
     # Handle profile update
     if request.method == "POST" and 'save_profile' in request.POST:
@@ -64,6 +71,7 @@ def profile(request):
     return render(request, "profile.html", {
         "form": profile_form,
         "password_form": password_form,
+        "profile_phot_form": profile_photo_form
     })
 
 def list_categories(request):

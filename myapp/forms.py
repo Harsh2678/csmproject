@@ -70,3 +70,11 @@ class UserProfileForm(forms.ModelForm):
         if qs.exists():
             raise forms.ValidationError("This email is already in use.")
         return email
+
+class UserProfilePhotoForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["profile_photo"]
+        widgets = {
+            "profile_photo": forms.ClearableFileInput(attrs={"class": "hidden-file-input"}),
+        }

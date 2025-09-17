@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .hidden-file-input {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     {% include "navigation.html" %}
@@ -33,13 +38,30 @@
             <div class="col-lg-4">
                 <div class="card">
                     <div class="card-body text-center">
-                        <img src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop" class="profile-avatar mb-3" alt="Profile Picture">
+                        {% if request.user.profile_photo %}
+                            <img src="{{ request.user.profile_photo.url }}" alt="Profile Picture" class="profile-avatar mb-3 rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                            <img src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop" alt="Profile Picture" class="profile-avatar mb-3 rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% endif %}
+                
                         <h5>{{ request.user.first_name }} {{ request.user.last_name }}</h5>
                         <p class="text-muted">{{ request.user.email|default:request.user.username }}</p>
                         <p class="small text-muted">Member since {{ request.user.date_joined|date:"F j, Y" }}</p>
-                        <button class="btn btn-outline-primary">Change Photo</button>
+                
+                        <form method="post" enctype="multipart/form-data" novalidate>
+                            {% csrf_token %}
+                            
+                            <label for="profile_photo">Change Photo</label>
+                            <input type="file" id="profile_photo" name="profile_photo" style="display:none;">
+                
+                            {% if profile_photo_form.profile_photo.errors %}
+                                <div class="text-danger small mt-1">{{ profile_photo_form.profile_photo.errors.0 }}</div>
+                            {% endif %}
+                
+                            <button type="submit" class="btn btn-primary mt-3" name="save_profile_photo">Upload</button>
+                        </form>
                     </div>
-                </div>
+                </div>                
             </div>
 
             <div class="col-lg-8">

@@ -13,9 +13,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
+from django.contrib.auth import logout
+from django.contrib.auth.forms import PasswordChangeForm
 
 def home(request):
     categories = Category.objects.all()
@@ -25,18 +28,43 @@ def home(request):
 def about(request):
     return render(request, "about.html")
 
+# @login_required
+# def profile(request):
+#     user = request.user
+#     if request.method == "POST":
+#         form = UserProfileForm(request.POST, instance=user)
+#         if form.is_valid():
+#             form.save()
+#         else:
+#             return render(request, "profile.html", {"form": form})
+#     else:
+#         form = UserProfileForm(instance=user)
+#     return render(request, "profile.html", {"form": form})
 @login_required
 def profile(request):
     user = request.user
-    if request.method == "POST":
-        form = UserProfileForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save()
-        else:
-            return render(request, "profile.html", {"form": form})
-    else:
-        form = UserProfileForm(instance=user)
-    return render(request, "profile.html", {"form": form})
+    profile_form = UserProfileForm(request.POST if request.POST and 'save_profile' in request.POST else None, instance=user)
+    password_form = PasswordChangeForm(user, request.POST if request.POST and 'change_password' in request.POST else None)
+
+    # Handle profile update
+    if request.method == "POST" and 'save_profile' in request.POST:
+        if profile_form.is_valid():
+            profile_form.save()
+            # messages.success(request, "Profile updated successfully!")
+            return redirect('profile')  # reload to clear POST data
+
+    # Handle password change
+    if request.method == "POST" and 'change_password' in request.POST:
+        if password_form.is_valid():
+            password_form.save()
+            logout(request)
+            messages.success(request, "Password updated! Please log in again.")
+            return redirect('account_login')  # or your login URL name
+
+    return render(request, "profile.html", {
+        "form": profile_form,
+        "password_form": password_form,
+    })
 
 def list_categories(request):
     categories = Category.objects.all().order_by('category_name')

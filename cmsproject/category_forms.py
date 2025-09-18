@@ -20,7 +20,7 @@ class CategoryForm(forms.ModelForm):
             raise forms.ValidationError("Only .jpg, .jpeg and .png formats are allowed.")
 
         # Size check (10 KB)
-        max_size = 10 * 1024
+        max_size = 100 * 1024
         if image.size > max_size:
             raise forms.ValidationError("Image size must not exceed 10 KB.")
 

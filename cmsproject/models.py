@@ -2,7 +2,18 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
 from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User  # or your custom user
+from django.conf import settings  # Use this for referencing user model
+from django.contrib.auth.models import AbstractUser  # For custom user
+
+
+class CustomUser(AbstractUser):
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
+
+
+    def __str__(self):
+        return self.username
+
 
 class Category(models.Model):
     category_name = models.CharField(max_length=255)
@@ -10,25 +21,20 @@ class Category(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                Lower("category_name"),
-                name="unique_category_name_ci"
-            )
+            UniqueConstraint(Lower("category_name"), name="unique_category_name_ci"),
         ]
 
     def clean(self):
-        """Model-level validation (works outside Admin too)."""
-
-        # Case-insensitive uniqueness
         if Category.objects.exclude(pk=self.pk).filter(category_name__iexact=self.category_name).exists():
             raise ValidationError({"category_name": "Category already exists."})
 
     def save(self, *args, **kwargs):
-        self.full_clean()  # ensures validation always runs
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.category_name
+
 
 class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
@@ -37,20 +43,19 @@ class SubCategory(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                Lower("sub_category_name"),
-                "category",
-                name="unique_sub_category_per_category_ci"
-            )
+            UniqueConstraint(Lower("sub_category_name"), "category", name="unique_sub_category_per_category_ci"),
         ]
 
     def clean(self):
         if not self.category_id:
             raise ValidationError({"category": "Category is required."})
 
-        if SubCategory.objects.exclude(pk=self.pk).filter(sub_category_name__iexact=self.sub_category_name, category=self.category).exists():
+        if SubCategory.objects.exclude(pk=self.pk).filter(
+            sub_category_name__iexact=self.sub_category_name,
+            category=self.category,
+        ).exists():
             raise ValidationError({"sub_category_name": "Sub Category already exists."})
-        
+
         if self.sub_category_name and len(self.sub_category_name) < 3:
             raise ValidationError({"sub_category_name": "Sub Category name must be at least 3 characters long."})
 
@@ -60,6 +65,7 @@ class SubCategory(models.Model):
 
     def __str__(self):
         return self.sub_category_name
+
 
 class Product(models.Model):
     sub_category = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
@@ -72,23 +78,22 @@ class Product(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                Lower("product_name"),
-                "sub_category",
-                name="unique_product_per_sub_category_ci"
-            )
+            UniqueConstraint(Lower("product_name"), "sub_category", name="unique_product_per_sub_category_ci"),
         ]
-    
+
     def clean(self):
         if not self.sub_category_id:
             raise ValidationError({"sub_category": "Sub Category is required."})
-        
-        if Product.objects.exclude(pk=self.pk).filter(product_name__iexact=self.product_name, sub_category=self.sub_category).exists():
+
+        if Product.objects.exclude(pk=self.pk).filter(
+            product_name__iexact=self.product_name,
+            sub_category=self.sub_category
+        ).exists():
             raise ValidationError({"product_name": "Product already exists."})
-        
+
         if self.product_name and len(self.product_name) < 3:
             raise ValidationError({"product_name": "Product name must be at least 3 characters long."})
-        
+
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
@@ -96,8 +101,9 @@ class Product(models.Model):
     def __str__(self):
         return self.product_name
 
+
 class Cart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="carts")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="carts")
     created_at = models.DateTimeField(auto_now_add=True)
     cart_subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -106,9 +112,10 @@ class Cart(models.Model):
     def __str__(self):
         return f"Cart {self.id} for {self.user.username}"
 
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey("Product", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):
@@ -120,16 +127,14 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
-    # Razorpay identifiers for reconciliation
     razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
     razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
-    # Payment summary
     PAYMENT_METHOD_CHOICES = [
         ("razorpay", "Razorpay"),
         ("cod", "Cash on Delivery"),
@@ -148,7 +153,6 @@ class Order(models.Model):
     payment_status = models.CharField(max_length=16, choices=PAYMENT_STATUS_CHOICES, default="pending")
     from django.db.models import JSONField as BuiltinJSONField
     payment_details = BuiltinJSONField(null=True, blank=True)
-    # Convenience fields by method
     upi_vpa = models.CharField(max_length=255, null=True, blank=True)
     card_last4 = models.CharField(max_length=4, null=True, blank=True)
     card_network = models.CharField(max_length=64, null=True, blank=True)
@@ -170,6 +174,7 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} × {self.product.product_name}"
 
+
 class ShippingInfo(models.Model):
     from django.core.validators import RegexValidator
 
@@ -182,7 +187,7 @@ class ShippingInfo(models.Model):
     ]
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="shipping_info")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="shipping_infos")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="shipping_infos")
     shipping_first_name = models.CharField(
         max_length=255,
         validators=[RegexValidator(r'^[A-Za-z\s-]+$', "This field may only contain letters, spaces, and hyphens.")]
@@ -205,5 +210,3 @@ class ShippingInfo(models.Model):
     shipping_state = models.CharField(max_length=2, choices=STATE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # Rely on ModelForm field validators/messages for per-field errors

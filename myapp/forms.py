@@ -1,7 +1,10 @@
 from django import forms
 from cmsproject.models import ShippingInfo
 from django.contrib.auth import get_user_model  # Use this for dynamic user model
+from django.core.exceptions import ValidationError
 
+ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/jpg"]
+MAX_UPLOAD_SIZE = 1 * 1024 * 1024  # 1 MB
 User = get_user_model()  # Get the custom user model
 
 class ShippingInfoForm(forms.ModelForm):
@@ -78,3 +81,14 @@ class UserProfilePhotoForm(forms.ModelForm):
         widgets = {
             "profile_photo": forms.ClearableFileInput(attrs={"class": "hidden-file-input"}),
         }
+    
+    def clean_profile_photo(self):
+        photo = self.cleaned_data.get("profile_photo")
+        if photo:
+            content_type = photo.content_type
+            if content_type not in ALLOWED_CONTENT_TYPES:
+                raise ValidationError("Only PNG, JPG, and JPEG files are allowed.")
+
+            if photo.size > MAX_UPLOAD_SIZE:
+                raise ValidationError("Image file too large (maximum 1 MB allowed).")
+        return photo

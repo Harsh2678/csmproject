@@ -71,7 +71,7 @@ def profile(request):
     return render(request, "profile.html", {
         "form": profile_form,
         "password_form": password_form,
-        "profile_phot_form": profile_photo_form
+        "profile_photo_form": profile_photo_form
     })
 
 def list_categories(request):

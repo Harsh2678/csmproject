@@ -34,6 +34,8 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+# Point to your custom user model, adjust app label as needed
+AUTH_USER_MODEL = 'cmsproject.CustomUser'
 
 # Application definition
 

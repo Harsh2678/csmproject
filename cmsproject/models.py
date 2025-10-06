@@ -207,6 +207,6 @@ class ShippingInfo(models.Model):
         max_length=7,
         validators=[RegexValidator(r"^\+?\d{6}$", "Enter a valid ZIP/Postal code.")]
     )
-    shipping_state = models.CharField(max_length=2, choices=STATE_CHOICES)
+    shipping_state = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

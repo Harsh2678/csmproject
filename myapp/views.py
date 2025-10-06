@@ -225,6 +225,23 @@ def checkout(request):
     tax = (subtotal * Decimal('0.08')).quantize(Decimal('0.01'))
     total = (subtotal + tax).quantize(Decimal('0.01'))
 
+    # India states and cities via python package (no client-side CDN dependency)
+    india_states = []
+    india_state_to_cities = {}
+    try:
+        from indian_cities.dj_city import cities as IN_CITIES  # type: ignore
+        india_states = [state for state, _ in IN_CITIES]
+        india_state_to_cities = {state: [c[0] for c in city_list] for state, city_list in IN_CITIES}
+    except Exception:
+        india_states = []
+        india_state_to_cities = {}
+    # Serialize mapping to JSON string for safe embedding in template
+    try:
+        import json as _json
+        india_state_to_cities_json = _json.dumps(india_state_to_cities, ensure_ascii=False)
+    except Exception:
+        india_state_to_cities_json = "{}"
+
     return render(request, "checkout.html", {
         "cart": cart,
         "items": items,
@@ -232,6 +249,9 @@ def checkout(request):
         "tax": tax,
         "total": total,
         "form": ShippingInfoForm(),
+        "india_states": india_states,
+        "india_state_to_cities": india_state_to_cities,
+        "india_state_to_cities_json": india_state_to_cities_json,
     })
 
 @login_required

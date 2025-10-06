@@ -1,0 +1,12 @@
+<turbo-frame id="profile_photo_frame">
+    {% if profile.profile_photo %}
+    <img src="{{ profile.profile_photo.url }}" alt="Profile Photo" width="120"/>
+    {% endif %}
+    <form method="post" action="{% url 'profile' %}" enctype="multipart/form-data" novalidate data-turbo="true" data-turbo-frame="profile_photo_frame">
+      {% csrf_token %}
+      <label for="id_profile_photo">Change Photo</label>
+      <input type="file" id="id_profile_photo" name="profile_photo" required>
+      <button type="submit" name="save_profile_photo">Upload</button>
+    </form>
+  </turbo-frame>
+  
